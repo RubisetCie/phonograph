@@ -64,4 +64,8 @@ http://developer.android.com/guide/topics/appwidgets/index.html#CreatingLayout
 
     <dimen name="card_on_app_bar_side_padding">8dp</dimen>
 
+    <!-- Material Cap -->
+    <dimen name="mcab_toolbar_elevation">4dp</dimen>
+    <dimen name="mcab_default_content_inset">72dp</dimen>
+
 </resources>

@@ -29,7 +29,6 @@ import retrofit2.Response;
 import java.util.List;
 import java.util.Locale;
 
-import com.afollestad.materialcab.MaterialCab;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.afollestad.materialdialogs.util.DialogUtils;
 import com.bumptech.glide.Glide;
@@ -55,6 +54,7 @@ import com.kabouzeid.gramophone.misc.WrappedAsyncTaskLoader;
 import com.kabouzeid.gramophone.model.Artist;
 import com.kabouzeid.gramophone.model.Song;
 import com.kabouzeid.gramophone.ui.activities.base.AbsSlidingMusicPanelActivity;
+import com.kabouzeid.gramophone.util.materialcab.MaterialCab;
 import com.kabouzeid.gramophone.util.CustomArtistImageUtil;
 import com.kabouzeid.gramophone.util.MusicUtil;
 import com.kabouzeid.gramophone.util.NavigationUtil;

@@ -2,7 +2,7 @@ package com.kabouzeid.gramophone.interfaces;
 
 import androidx.annotation.NonNull;
 
-import com.afollestad.materialcab.MaterialCab;
+import com.kabouzeid.gramophone.util.materialcab.MaterialCab;
 
 /**
  * @author Karim Abou Zeid (kabouzeid)

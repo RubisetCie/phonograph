@@ -12,4 +12,12 @@
     <attr name="iconColor" format="color" />
     <attr name="dividerColor" format="color" />
 
+    <!-- Material Cap -->
+    <attr name="mcab_title" format="string" />
+    <attr name="mcab_popup_theme" format="reference" />
+    <attr name="mcab_contentinset_start" format="dimension" />
+    <attr name="mcab_menu" format="reference" />
+    <attr name="mcab_background_color" format="color" />
+    <attr name="mcab_close_drawable" format="reference" />
+
 </resources>

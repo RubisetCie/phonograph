@@ -16,4 +16,8 @@
     <item name="action_song_sort_order_year" type="id" />
 
     <item name="action_multi_select_adapter_check_all" type="id" />
+
+    <!-- Material Cap -->
+    <item name="mcab_toolbar" type="id" />
+
 </resources>

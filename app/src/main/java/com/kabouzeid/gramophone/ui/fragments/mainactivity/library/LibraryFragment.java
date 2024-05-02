@@ -20,7 +20,6 @@ import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.afollestad.materialcab.MaterialCab;
 import com.kabouzeid.appthemehelper.ThemeStore;
 import com.kabouzeid.appthemehelper.common.ATHToolbarActivity;
 import com.kabouzeid.appthemehelper.util.TabLayoutUtil;
@@ -40,6 +39,7 @@ import com.kabouzeid.gramophone.ui.fragments.mainactivity.library.pager.AlbumsFr
 import com.kabouzeid.gramophone.ui.fragments.mainactivity.library.pager.ArtistsFragment;
 import com.kabouzeid.gramophone.ui.fragments.mainactivity.library.pager.PlaylistsFragment;
 import com.kabouzeid.gramophone.ui.fragments.mainactivity.library.pager.SongsFragment;
+import com.kabouzeid.gramophone.util.materialcab.MaterialCab;
 import com.kabouzeid.gramophone.util.PhonographColorUtil;
 import com.kabouzeid.gramophone.util.PreferenceUtil;
 import com.kabouzeid.gramophone.util.Util;
