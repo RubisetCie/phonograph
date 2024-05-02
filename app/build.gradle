@@ -1,6 +1,8 @@
 import javax.annotation.Nullable
 
-apply plugin: 'com.android.application'
+plugins {
+    id "com.android.application" apply true
+}
 
 static def gitBranch() {
     def branch = 'GitHub'
@@ -20,41 +22,34 @@ static def gitBranch() {
     branch
 }
 
-def getProperties(String fileName) {
-    final Properties properties = new Properties()
-    def file = file(fileName)
-    if (file.exists()) {
-        file.withInputStream { stream -> properties.load(stream) }
-    }
-    return properties
-}
-
-static def getProperty(@Nullable Properties properties, String name) {
-    return properties.getProperty(name) ?: "$name missing"
-}
-
 android {
-    compileSdkVersion 29
-    buildToolsVersion '29.0.3'
+    compileSdkVersion 30
+    buildToolsVersion '30.0.3'
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 29
+        minSdkVersion 19
+        targetSdkVersion 30
 
         renderscriptTargetApi 29
         vectorDrawables.useSupportLibrary = true
 
         applicationId 'com.kabouzeid.gramophone'
-        versionCode 179
-        versionName '1.3.5'
+        versionCode 180
+        versionName '1.4.0'
     }
     signingConfigs {
         release {
-            Properties properties = getProperties('/Users/karim/Documents/Phonograph/privatekeys/keystore.properties')
-            storeFile file(getProperty(properties, 'storeFile'))
-            keyAlias getProperty(properties, 'keyAlias')
-            storePassword getProperty(properties, 'storePassword')
-            keyPassword getProperty(properties, 'keyPassword')
+            storeFile file('storeFile')
+            keyAlias 'signer'
+            keyPassword 'password'
+            storePassword 'password'
         }
+    }
+    tasks.withType(JavaCompile).configureEach{
+        options.fork = true
+        options.forkOptions.jvmArgs +=[
+                '--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+                '--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+                '--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED']
     }
     buildTypes {
         release {
@@ -78,8 +73,8 @@ android {
         abortOnError false
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
@@ -103,7 +98,6 @@ dependencies {
     implementation 'com.github.kabouzeid:AndroidSlidingUpPanel:6'
     implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
     implementation 'com.afollestad.material-dialogs:commons:0.9.6.0'
-    implementation 'com.afollestad:material-cab:0.1.12'
     implementation 'com.github.ksoichiro:android-observablescrollview:1.6.0'
     implementation 'com.heinrichreimersoftware:material-intro:2.0.0'
     implementation 'me.zhanghai.android.materialprogressbar:library:1.6.1'
@@ -118,7 +112,6 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.5.0'
     implementation 'com.google.code.gson:gson:2.8.6'
 
-    implementation 'com.anjlab.android.iab.v3:library:1.0.45'
     implementation 'de.psdev.licensesdialog:licensesdialog:2.1.0'
 
     implementation 'com.github.bumptech.glide:glide:3.8.0'
