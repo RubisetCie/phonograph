@@ -17,6 +17,7 @@ import android.widget.Toast;
 import com.kabouzeid.appthemehelper.util.ATHUtil;
 import com.kabouzeid.gramophone.App;
 import com.kabouzeid.gramophone.R;
+import com.kabouzeid.gramophone.util.AllFilesAccess;
 import com.kabouzeid.gramophone.adapter.base.AbsMultiSelectAdapter;
 import com.kabouzeid.gramophone.adapter.base.MediaEntryViewHolder;
 import com.kabouzeid.gramophone.dialogs.ClearSmartPlaylistDialog;
@@ -157,7 +158,8 @@ public class PlaylistAdapter extends AbsMultiSelectAdapter<PlaylistAdapter.ViewH
                 if (selection.size() == 1) {
                     PlaylistMenuHelper.handleMenuClick(activity, selection.get(0), menuItem);
                 } else {
-                    new SavePlaylistsAsyncTask(activity).execute(selection);
+                    AllFilesAccess.runWithAccess(activity, R.string.files_access_content,
+                            () -> new SavePlaylistsAsyncTask(activity).execute(selection));
                 }
                 break;
             default:

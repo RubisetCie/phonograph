@@ -17,7 +17,7 @@ import android.view.View;
 
 import com.kabouzeid.appthemehelper.ThemeStore;
 import com.kabouzeid.gramophone.R;
-import com.kabouzeid.gramophone.util.PlaylistsUtil;
+import com.kabouzeid.gramophone.util.AllFilesAccess;
 
 /**
  * @author Karim Abou Zeid (kabouzeid)
@@ -58,7 +58,7 @@ public abstract class AbsBaseActivity extends AbsThemeActivity {
                 onHasPermissionsChanged(hasPermissions);
             }
         }
-        PlaylistsUtil.retryPendingWrite();
+        AllFilesAccess.onActivityResumed(this);
     }
 
     protected void onHasPermissionsChanged(boolean hasPermissions) {

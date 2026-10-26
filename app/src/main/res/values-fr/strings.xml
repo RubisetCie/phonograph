@@ -72,8 +72,9 @@
     <string name="playlist_exists">La playlist %1$s existe déjà.</string>
     <string name="could_not_create_playlist">Impossible de cr\u00e9er la playlist.</string>
     <string name="could_not_modify_playlist">Impossible de modifier la playlist.</string>
-    <string name="playlist_access_title">Accès à la playlist</string>
+    <string name="all_files_access_title">Accès à tous les fichiers</string>
     <string name="playlist_access_content">Cette playlist a été créée par une autre application. Android ne permet à Phonograph de la modifier qu\u2019avec l\u2019autorisation « Accès à tous les fichiers ». Accordez-la dans l\u2019écran suivant, puis revenez.</string>
+    <string name="files_access_content">Android ne permet à Phonograph de modifier, supprimer ou enregistrer des fichiers dans votre stockage musical qu\u2019avec l\u2019autorisation « Accès à tous les fichiers ». Accordez-la dans l\u2019écran suivant, puis revenez.</string>
     <string name="delete_playlist_x"><![CDATA[Supprimer la liste de lecture <b>%1$s</b> ?]]></string>
     <string name="clear_playlist_x"><![CDATA[Effacer la liste de lecture <b>%1$s</b> ? Ceci ne peut pas \u00eatre annul\u00e9 !]]></string>
     <string name="delete_x_playlists"><![CDATA[Supprimer les playlists <b>%1$d</b>?]]></string>

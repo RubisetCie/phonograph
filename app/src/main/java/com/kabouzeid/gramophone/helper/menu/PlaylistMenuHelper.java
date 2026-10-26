@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import com.kabouzeid.gramophone.App;
 import com.kabouzeid.gramophone.R;
+import com.kabouzeid.gramophone.util.AllFilesAccess;
 import com.kabouzeid.gramophone.dialogs.AddToPlaylistDialog;
 import com.kabouzeid.gramophone.dialogs.DeletePlaylistDialog;
 import com.kabouzeid.gramophone.dialogs.RenamePlaylistDialog;
@@ -49,7 +50,8 @@ public class PlaylistMenuHelper {
                 DeletePlaylistDialog.create(playlist).show(activity.getSupportFragmentManager(), "DELETE_PLAYLIST");
                 return true;
             case R.id.action_save_playlist:
-                new SavePlaylistAsyncTask(activity).execute(playlist);
+                AllFilesAccess.runWithAccess(activity, R.string.files_access_content,
+                        () -> new SavePlaylistAsyncTask(activity).execute(playlist));
                 return true;
         }
         return false;

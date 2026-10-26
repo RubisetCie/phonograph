@@ -1,25 +1,18 @@
 package com.kabouzeid.gramophone.util;
 
-import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.ContextWrapper;
-import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import android.widget.Toast;
 
-import com.afollestad.materialdialogs.MaterialDialog;
 import com.kabouzeid.gramophone.R;
 import com.kabouzeid.gramophone.helper.M3UWriter;
 import com.kabouzeid.gramophone.model.Playlist;
@@ -37,10 +30,6 @@ import static android.provider.MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI;
  * @author Karim Abou Zeid (kabouzeid)
  */
 public class PlaylistsUtil {
-
-    // A playlist write that failed for lack of permission, retried once the user granted it
-    @Nullable
-    private static Runnable pendingWrite;
 
     public static boolean doesPlaylistExist(@NonNull final Context context, final long playlistId) {
         return playlistId != -1 && doesPlaylistExist(context,
@@ -313,52 +302,12 @@ public class PlaylistsUtil {
 
     /**
      * Since Android 11 the MediaStore only lets an app modify the playlists it created itself,
-     * unless it holds the "All files access" permission. Offer to grant it, then retry the write
-     * when the user comes back from the settings screen (see {@link #retryPendingWrite()}).
+     * unless it holds "All files access". Offer to grant it, then retry the write.
      */
     private static void onWriteDenied(@NonNull final Context context, @Nullable final Runnable retry) {
-        final Activity activity = findActivity(context);
-        if (activity != null && !activity.isFinishing()
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
-            new MaterialDialog.Builder(activity)
-                    .title(R.string.playlist_access_title)
-                    .content(R.string.playlist_access_content)
-                    .positiveText(R.string.action_grant)
-                    .negativeText(android.R.string.cancel)
-                    .onPositive((dialog, which) -> {
-                        pendingWrite = retry;
-                        openAllFilesAccessSettings(activity);
-                    })
-                    .show();
-        } else {
+        if (AllFilesAccess.isGranted() || !AllFilesAccess.request(context, R.string.playlist_access_content, retry)) {
             Toast.makeText(context, R.string.could_not_modify_playlist, Toast.LENGTH_SHORT).show();
         }
-    }
-
-    public static void retryPendingWrite() {
-        final Runnable retry = pendingWrite;
-        pendingWrite = null;
-        if (retry != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
-            retry.run();
-        }
-    }
-
-    private static void openAllFilesAccessSettings(@NonNull final Activity activity) {
-        try {
-            activity.startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                    Uri.parse("package:" + activity.getPackageName())));
-        } catch (ActivityNotFoundException e) {
-            activity.startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-        }
-    }
-
-    @Nullable
-    private static Activity findActivity(@Nullable Context context) {
-        while (context instanceof ContextWrapper) {
-            if (context instanceof Activity) return (Activity) context;
-            context = ((ContextWrapper) context).getBaseContext();
-        }
-        return null;
     }
 
     private static boolean doesPlaylistExist(@NonNull Context context, @NonNull final String selection, @NonNull final String[] values) {
