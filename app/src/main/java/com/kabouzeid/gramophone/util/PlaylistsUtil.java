@@ -1,18 +1,25 @@
 package com.kabouzeid.gramophone.util;
 
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.kabouzeid.gramophone.R;
 import com.kabouzeid.gramophone.helper.M3UWriter;
 import com.kabouzeid.gramophone.model.Playlist;
@@ -30,6 +37,10 @@ import static android.provider.MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI;
  * @author Karim Abou Zeid (kabouzeid)
  */
 public class PlaylistsUtil {
+
+    // A playlist write that failed for lack of permission, retried once the user granted it
+    @Nullable
+    private static Runnable pendingWrite;
 
     public static boolean doesPlaylistExist(@NonNull final Context context, final long playlistId) {
         return playlistId != -1 && doesPlaylistExist(context,
@@ -93,11 +104,16 @@ public class PlaylistsUtil {
             }
         }
         selection.append(")");
+        int numDeleted = 0;
         try {
-            context.getContentResolver().delete(EXTERNAL_CONTENT_URI, selection.toString(), null);
+            numDeleted = context.getContentResolver().delete(EXTERNAL_CONTENT_URI, selection.toString(), null);
             // Necessary because somehow the MediaStoreObserver doesn't work for playlists
             context.getContentResolver().notifyChange(EXTERNAL_CONTENT_URI, null);
         } catch (SecurityException ignored) {
+        }
+        if (numDeleted < playlists.size()) {
+            final Context appContext = context.getApplicationContext();
+            onWriteDenied(context, () -> deletePlaylists(appContext, playlists));
         }
     }
 
@@ -116,6 +132,7 @@ public class PlaylistsUtil {
         final Uri uri = MediaStore.Audio.Playlists.Members.getContentUri("external", playlistId);
         Cursor cursor = null;
         int base = 0;
+        int numInserted = 0;
 
         try {
             try {
@@ -130,18 +147,20 @@ public class PlaylistsUtil {
                 }
             }
 
-            int numInserted = 0;
             for (int offSet = 0; offSet < size; offSet += 1000)
                 numInserted += resolver.bulkInsert(uri, makeInsertItems(songs, offSet, 1000, base));
 
             // Necessary because somehow the MediaStoreObserver doesn't work for playlists
             context.getContentResolver().notifyChange(uri, null);
-
-            if (showToastOnFinish) {
-                Toast.makeText(context, context.getResources().getString(
-                        R.string.inserted_x_songs_into_playlist_x, numInserted, getNameForPlaylist(context, playlistId)), Toast.LENGTH_SHORT).show();
-            }
         } catch (SecurityException ignored) {
+        }
+
+        if (numInserted == 0 && size > 0) {
+            final Context appContext = context.getApplicationContext();
+            onWriteDenied(context, () -> addToPlaylist(appContext, songs, playlistId, showToastOnFinish));
+        } else if (showToastOnFinish) {
+            Toast.makeText(context, context.getResources().getString(
+                    R.string.inserted_x_songs_into_playlist_x, numInserted, getNameForPlaylist(context, playlistId)), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -167,11 +186,16 @@ public class PlaylistsUtil {
         String selection = MediaStore.Audio.Playlists.Members.AUDIO_ID + " =?";
         String[] selectionArgs = new String[]{String.valueOf(song.id)};
 
+        int numDeleted = 0;
         try {
-            context.getContentResolver().delete(uri, selection, selectionArgs);
+            numDeleted = context.getContentResolver().delete(uri, selection, selectionArgs);
             // Necessary because somehow the MediaStoreObserver doesn't work for playlists
             context.getContentResolver().notifyChange(uri, null);
         } catch (SecurityException ignored) {
+        }
+        if (numDeleted == 0) {
+            final Context appContext = context.getApplicationContext();
+            onWriteDenied(context, () -> removeFromPlaylist(appContext, song, playlistId));
         }
     }
 
@@ -187,11 +211,16 @@ public class PlaylistsUtil {
         for (String selectionArg : selectionArgs) selection += "?, ";
         selection = selection.substring(0, selection.length() - 2) + ")";
 
+        int numDeleted = 0;
         try {
-            context.getContentResolver().delete(uri, selection, selectionArgs);
+            numDeleted = context.getContentResolver().delete(uri, selection, selectionArgs);
             // Necessary because somehow the MediaStoreObserver is not notified when adding a playlist
             context.getContentResolver().notifyChange(uri, null);
         } catch (SecurityException ignored) {
+        }
+        if (numDeleted == 0) {
+            final Context appContext = context.getApplicationContext();
+            onWriteDenied(context, () -> removeFromPlaylist(appContext, songs));
         }
     }
 
@@ -217,8 +246,16 @@ public class PlaylistsUtil {
     }
 
     public static boolean moveItem(@NonNull final Context context, long playlistId, int from, int to) {
-        boolean res = MediaStore.Audio.Playlists.Members.moveItem(context.getContentResolver(),
-                playlistId, from, to);
+        boolean res = false;
+        try {
+            res = MediaStore.Audio.Playlists.Members.moveItem(context.getContentResolver(),
+                    playlistId, from, to);
+        } catch (SecurityException ignored) {
+        }
+        if (!res) {
+            // Not retried: the positions may be stale by the time the user comes back
+            onWriteDenied(context, null);
+        }
         // Necessary because somehow the MediaStoreObserver doesn't work for playlists
         // NOTE: actually for now lets disable this because it messes with the animation (tested on Android 11)
 //        context.getContentResolver().notifyChange(ContentUris.withAppendedId(EXTERNAL_CONTENT_URI, playlistId), null);
@@ -229,8 +266,9 @@ public class PlaylistsUtil {
         Uri playlistUri = ContentUris.withAppendedId(EXTERNAL_CONTENT_URI, id);
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.Audio.PlaylistsColumns.NAME, newName);
+        int numUpdated = 0;
         try {
-            context.getContentResolver().update(
+            numUpdated = context.getContentResolver().update(
                     playlistUri,
                     contentValues,
                     null,
@@ -240,6 +278,10 @@ public class PlaylistsUtil {
             // Necessary because somehow the MediaStoreObserver doesn't work for playlists
             context.getContentResolver().notifyChange(playlistUri, null);
         } catch (SecurityException ignored) {
+        }
+        if (numUpdated == 0) {
+            final Context appContext = context.getApplicationContext();
+            onWriteDenied(context, () -> renamePlaylist(appContext, id, newName));
         }
     }
 
@@ -267,6 +309,56 @@ public class PlaylistsUtil {
 
     public static File savePlaylist(Context context, Playlist playlist) throws IOException {
         return M3UWriter.write(context, new File(Environment.getExternalStorageDirectory(), "Playlists"), playlist);
+    }
+
+    /**
+     * Since Android 11 the MediaStore only lets an app modify the playlists it created itself,
+     * unless it holds the "All files access" permission. Offer to grant it, then retry the write
+     * when the user comes back from the settings screen (see {@link #retryPendingWrite()}).
+     */
+    private static void onWriteDenied(@NonNull final Context context, @Nullable final Runnable retry) {
+        final Activity activity = findActivity(context);
+        if (activity != null && !activity.isFinishing()
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            new MaterialDialog.Builder(activity)
+                    .title(R.string.playlist_access_title)
+                    .content(R.string.playlist_access_content)
+                    .positiveText(R.string.action_grant)
+                    .negativeText(android.R.string.cancel)
+                    .onPositive((dialog, which) -> {
+                        pendingWrite = retry;
+                        openAllFilesAccessSettings(activity);
+                    })
+                    .show();
+        } else {
+            Toast.makeText(context, R.string.could_not_modify_playlist, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public static void retryPendingWrite() {
+        final Runnable retry = pendingWrite;
+        pendingWrite = null;
+        if (retry != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            retry.run();
+        }
+    }
+
+    private static void openAllFilesAccessSettings(@NonNull final Activity activity) {
+        try {
+            activity.startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.parse("package:" + activity.getPackageName())));
+        } catch (ActivityNotFoundException e) {
+            activity.startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+        }
+    }
+
+    @Nullable
+    private static Activity findActivity(@Nullable Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
     }
 
     private static boolean doesPlaylistExist(@NonNull Context context, @NonNull final String selection, @NonNull final String[] values) {
