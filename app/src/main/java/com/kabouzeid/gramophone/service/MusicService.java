@@ -295,6 +295,9 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent != null) {
             if (intent.getAction() != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    playingNotification.ensureForeground();
+                }
                 restoreQueuesAndPositionIfNecessary();
                 String action = intent.getAction();
                 switch (action) {
@@ -354,6 +357,9 @@ public class MusicService extends Service implements SharedPreferences.OnSharedP
                     case ACTION_PENDING_QUIT:
                         pendingQuit = true;
                         break;
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    playingNotification.leaveForegroundIfNotPlaying();
                 }
             }
         }

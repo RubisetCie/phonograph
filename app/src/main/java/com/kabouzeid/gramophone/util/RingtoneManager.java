@@ -51,6 +51,8 @@ public class RingtoneManager {
             resolver.update(uri, values, null, null);
         } catch (@NonNull final UnsupportedOperationException ignored) {
             return;
+        } catch (@NonNull final SecurityException ignored) {
+            // Since Android 10 only the app that added the song may flag it; the ringtone can still be set below
         }
 
         try {

@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
 
 import com.kabouzeid.gramophone.R;
 import com.kabouzeid.gramophone.service.MusicService;
@@ -24,6 +25,7 @@ public abstract class PlayingNotification {
     private NotificationManager notificationManager;
     protected MusicService service;
     boolean stopped;
+    private Notification lastNotification;
 
     public synchronized void init(MusicService service) {
         this.service = service;
@@ -39,9 +41,39 @@ public abstract class PlayingNotification {
         stopped = true;
         service.stopForeground(true);
         notificationManager.cancel(NOTIFICATION_ID);
+        notifyMode = NOTIFY_MODE_BACKGROUND;
+        lastNotification = null;
+    }
+
+    /**
+     * A service started with startForegroundService() (widgets, media buttons) gets killed by Android
+     * unless it calls startForeground() promptly, even if the command doesn't end up starting playback.
+     */
+    public synchronized void ensureForeground() {
+        if (notifyMode == NOTIFY_MODE_FOREGROUND) return;
+        Notification notification = lastNotification;
+        if (notification == null) {
+            notification = new NotificationCompat.Builder(service, NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle(service.getString(R.string.app_name))
+                    .build();
+        }
+        service.startForeground(NOTIFICATION_ID, notification);
+        notifyMode = NOTIFY_MODE_FOREGROUND;
+    }
+
+    /**
+     * Leaves the foreground state entered by {@link #ensureForeground()} if nothing is playing.
+     */
+    public synchronized void leaveForegroundIfNotPlaying() {
+        if (notifyMode == NOTIFY_MODE_FOREGROUND && !service.isPlaying()) {
+            service.stopForeground(lastNotification == null);
+            notifyMode = NOTIFY_MODE_BACKGROUND;
+        }
     }
 
     void updateNotifyModeAndPostNotification(Notification notification) {
+        lastNotification = notification;
         int newNotifyMode;
         if (service.isPlaying()) {
             newNotifyMode = NOTIFY_MODE_FOREGROUND;

@@ -4,10 +4,12 @@ import android.app.Dialog;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
 import android.text.Html;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.kabouzeid.gramophone.R;
+import com.kabouzeid.gramophone.util.AllFilesAccess;
 import com.kabouzeid.gramophone.model.Song;
 import com.kabouzeid.gramophone.util.MusicUtil;
 
@@ -55,9 +57,11 @@ public class DeleteSongsDialog extends DialogFragment {
                 .positiveText(R.string.delete_action)
                 .negativeText(android.R.string.cancel)
                 .onPositive((dialog, which) -> {
-                    if (getActivity() == null)
+                    final FragmentActivity activity = getActivity();
+                    if (activity == null)
                         return;
-                    MusicUtil.deleteTracks(getActivity(), songs);
+                    AllFilesAccess.runWithAccess(activity, R.string.files_access_content,
+                            () -> MusicUtil.deleteTracks(activity, songs));
                 })
                 .build();
     }

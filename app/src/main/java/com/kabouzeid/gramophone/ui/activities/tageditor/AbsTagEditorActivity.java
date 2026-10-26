@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
@@ -27,6 +28,7 @@ import com.kabouzeid.appthemehelper.ThemeStore;
 import com.kabouzeid.appthemehelper.util.ColorUtil;
 import com.kabouzeid.appthemehelper.util.TintHelper;
 import com.kabouzeid.gramophone.R;
+import com.kabouzeid.gramophone.util.AllFilesAccess;
 import com.kabouzeid.gramophone.misc.DialogAsyncTask;
 import com.kabouzeid.gramophone.misc.SimpleObservableScrollViewCallbacks;
 import com.kabouzeid.gramophone.misc.UpdateToastMediaScannerCompletionListener;
@@ -205,7 +207,12 @@ public abstract class AbsTagEditorActivity extends AbsBaseActivity {
         intent.putExtra(SearchManager.QUERY, stringBuilder.toString());
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        startActivity(intent);
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            // No web search handler, e.g. on phones without Google apps
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(stringBuilder.toString()))));
+        }
     }
 
     @Override
@@ -265,7 +272,8 @@ public abstract class AbsTagEditorActivity extends AbsBaseActivity {
     protected void writeValuesToFiles(@NonNull final Map<FieldKey, String> fieldKeyValueMap, @Nullable final ArtworkInfo artworkInfo) {
         Util.hideSoftKeyboard(this);
 
-        new WriteTagsAsyncTask(this).execute(new WriteTagsAsyncTask.LoadingInfo(getSongPaths(), fieldKeyValueMap, artworkInfo));
+        AllFilesAccess.runWithAccess(this, R.string.files_access_content, () ->
+                new WriteTagsAsyncTask(this).execute(new WriteTagsAsyncTask.LoadingInfo(getSongPaths(), fieldKeyValueMap, artworkInfo)));
     }
 
     private static class WriteTagsAsyncTask extends DialogAsyncTask<WriteTagsAsyncTask.LoadingInfo, Integer, String[]> {

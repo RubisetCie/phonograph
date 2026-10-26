@@ -52,7 +52,11 @@ public class MusicPlayerRemote {
         }
 
         final ContextWrapper contextWrapper = new ContextWrapper(realActivity);
-        contextWrapper.startService(new Intent(contextWrapper, MusicService.class));
+        try {
+            contextWrapper.startService(new Intent(contextWrapper, MusicService.class));
+        } catch (IllegalStateException ignored) {
+            // The app isn't considered foreground yet; bindService() below still creates the service
+        }
 
         final ServiceBinder binder = new ServiceBinder(callback);
 

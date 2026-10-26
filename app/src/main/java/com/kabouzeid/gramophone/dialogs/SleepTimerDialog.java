@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.SystemClock;
@@ -67,12 +68,18 @@ public class SleepTimerDialog extends DialogFragment {
 
                     final int minutes = seekArcProgress;
 
-                    PendingIntent pi = makeTimerPendingIntent(PendingIntent.FLAG_CANCEL_CURRENT);
+                    cancelTimer();
+                    PendingIntent pi = makeTimerPendingIntent(shouldFinishLastSong.isChecked(), PendingIntent.FLAG_CANCEL_CURRENT);
 
                     final long nextSleepTimerElapsedTime = SystemClock.elapsedRealtime() + minutes * 60 * 1000;
                     PreferenceUtil.getInstance(getActivity()).setNextSleepTimerElapsedRealtime(nextSleepTimerElapsedTime);
                     AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
-                    am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextSleepTimerElapsedTime, pi);
+                    // set() is inexact and may fire long after the chosen time, especially in Doze
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextSleepTimerElapsedTime, pi);
+                    } else {
+                        am.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, nextSleepTimerElapsedTime, pi);
+                    }
 
                     Toast.makeText(getActivity(), getActivity().getResources().getString(R.string.sleep_timer_set, minutes), Toast.LENGTH_SHORT).show();
                 })
@@ -80,11 +87,7 @@ public class SleepTimerDialog extends DialogFragment {
                     if (getActivity() == null) {
                         return;
                     }
-                    final PendingIntent previous = makeTimerPendingIntent(PendingIntent.FLAG_NO_CREATE);
-                    if (previous != null) {
-                        AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
-                        am.cancel(previous);
-                        previous.cancel();
+                    if (cancelTimer()) {
                         Toast.makeText(getActivity(), getActivity().getResources().getString(R.string.sleep_timer_canceled), Toast.LENGTH_SHORT).show();
                     }
 
@@ -95,7 +98,8 @@ public class SleepTimerDialog extends DialogFragment {
                     }
                 })
                 .showListener(dialog -> {
-                    if (makeTimerPendingIntent(PendingIntent.FLAG_NO_CREATE) != null) {
+                    if (makeTimerPendingIntent(false, PendingIntent.FLAG_NO_CREATE) != null
+                            || makeTimerPendingIntent(true, PendingIntent.FLAG_NO_CREATE) != null) {
                         timerUpdater.start();
                     }
                 })
@@ -157,13 +161,32 @@ public class SleepTimerDialog extends DialogFragment {
         timerDisplay.setText(seekArcProgress + " min");
     }
 
-    private PendingIntent makeTimerPendingIntent(int flag) {
-        return PendingIntent.getService(getActivity(), 0, makeTimerIntent(), flag);
+    /**
+     * Cancels the scheduled timer of either kind, the checkbox may have been toggled since it was set.
+     *
+     * @return whether a timer was scheduled
+     */
+    private boolean cancelTimer() {
+        boolean canceled = false;
+        AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
+        for (boolean finishLastSong : new boolean[]{false, true}) {
+            final PendingIntent previous = makeTimerPendingIntent(finishLastSong, PendingIntent.FLAG_NO_CREATE);
+            if (previous != null) {
+                am.cancel(previous);
+                previous.cancel();
+                canceled = true;
+            }
+        }
+        return canceled;
     }
 
-    private Intent makeTimerIntent() {
+    private PendingIntent makeTimerPendingIntent(boolean finishLastSong, int flag) {
+        return PendingIntent.getService(getActivity(), 0, makeTimerIntent(finishLastSong), flag);
+    }
+
+    private Intent makeTimerIntent(boolean finishLastSong) {
         Intent intent = new Intent(getActivity(), MusicService.class);
-        if (shouldFinishLastSong.isChecked()) {
+        if (finishLastSong) {
             return intent.setAction(MusicService.ACTION_PENDING_QUIT);
         }
         return intent.setAction(MusicService.ACTION_QUIT);
